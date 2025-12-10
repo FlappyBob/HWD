@@ -24,3 +24,5 @@ dist
 hwd.egg-info
 tests
 build
+emuru_result
+gen_data
