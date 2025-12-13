@@ -1,0 +1,5 @@
+matplotlib
+gudhi
+diffusers
+einops
+accelerate
