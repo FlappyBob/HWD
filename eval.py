@@ -12,10 +12,10 @@ from hwd.scores import (
 # Evaluation pairs: (fake_dataset_path, real_dataset_key)
 # ============================================================
 DATASETS = [
-    ("small_emuru_words", "iam_words__reference"),
-    ("small_emuru_lines", "iam_lines__reference"),
-    ("IAMWords_my_model", "iam_words__reference"),
-    ("IAMLines_my_model", "iam_lines__reference"),
+    ("rimes_lines__my_model", "rimes_lines__reference"),
+    # ("CVLLines_my_model", "cvl_lines__reference"),
+    # ("karaoke_handw_lines__my_model", "karaoke_handw_lines__reference"),
+    # ("karaoke_typew_lines__my_model", "karaoke_typew_lines__reference"),
 ]
 
 # ============================================================
