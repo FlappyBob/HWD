@@ -2,15 +2,21 @@ import torch
 from pathlib import Path
 from PIL import Image
 from transformers import AutoModel
-from hwd.datasets.shtg import IAMWords, IAMLines
 from torchvision import transforms as T
 from tqdm import tqdm
 
+from hwd.datasets.shtg import (
+    IAMWords,
+    IAMLines,
+    CVLLines,
+    RimesLines,
+    KaraokeLines
+)
 
 # ====================================
 # 0. Load model (GPU only)
 # ====================================
-MODEL_PATH = "./emuru_result/head_t5_small_2e-5_ech5"
+MODEL_PATH = "./emuru_result/head_t5_large_2e-5_ech3"
 
 print("Loading model...")
 model = AutoModel.from_pretrained(
@@ -34,22 +40,20 @@ def preprocess(pil_img):
     return transforms(pil_img.convert("RGB")).unsqueeze(0).cuda()
 
 
-
 # ====================================
-# FUNCTION: Generate all samples for a given dataset
+# 2. Core generation function
 # ====================================
 def run_generation(dataset, out_dir):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # save transcriptions.json
     dataset.save_transcriptions(out_dir)
     print(f"Saving images to: {out_dir}")
 
     for sample in tqdm(dataset, desc=f"Generating {out_dir.name}"):
 
         gen_text = sample["gen_text"]
-        style_pil = sample["style_imgs"][0]     # 1 style image
+        style_pil = sample["style_imgs"][0]
         style_tensor = preprocess(style_pil)
 
         dst_path = out_dir / sample["dst_path"]
@@ -62,31 +66,74 @@ def run_generation(dataset, out_dir):
                 max_new_tokens=256
             )
 
-        out_img.save(dst_path)
+        try:
+            out_img.save(dst_path)
+        except Exception as e:
+            print(f"[WARN] Failed saving {dst_path}: {e}")
 
     print(f"\n✔ DONE generating {out_dir.name} → {out_dir}\n")
 
 
+# ====================================
+# 3. Helper for standard Lines datasets
+# ====================================
+def generate_lines_dataset(dataset_cls, name):
+    print("\n==============================================")
+    print(f"Generating {name} ...")
+    dataset = dataset_cls(num_style_samples=1, load_gen_sample=False)
+    print(f"{name} size = {len(dataset)} samples")
+    run_generation(dataset, f"{name}_my_model")
 
 # ====================================
-# 2. Generate IAMWords
+# 6. Generate KaraokeLines (handwritten)
+# ====================================
+print("\n==============================================")
+print("Generating KaraokeLines (handwritten) ...")
+dataset_karaoke_hand = KaraokeLines(
+    flavor="handwritten",
+    num_style_samples=1,
+    load_gen_sample=False
+)
+print(f"KaraokeLines (handwritten) size = {len(dataset_karaoke_hand)} samples")
+run_generation(
+    dataset_karaoke_hand,
+    "KaraokeLines_handwritten_my_model"
+)
+
+
+# ====================================
+# 7. Generate KaraokeLines (typewritten)
+# ====================================
+print("\n==============================================")
+print("Generating KaraokeLines (typewritten) ...")
+dataset_karaoke_type = KaraokeLines(
+    flavor="typewritten",
+    num_style_samples=1,
+    load_gen_sample=False
+)
+print(f"KaraokeLines (typewritten) size = {len(dataset_karaoke_type)} samples")
+run_generation(
+    dataset_karaoke_type,
+    "KaraokeLines_typewritten_my_model"
+)
+
+generate_lines_dataset(RimesLines, "RimesLines")
+
+
+# ====================================
+# 4. Generate IAMWords
 # ====================================
 print("\n==============================================")
 print("Generating IAMWords ...")
 dataset_words = IAMWords(num_style_samples=1, load_gen_sample=False)
 print(f"IAMWords size = {len(dataset_words)} samples")
-
 run_generation(dataset_words, "IAMWords_my_model")
 
 
-
 # ====================================
-# 3. Generate IAMLines
+# 5. Generate Lines datasets
 # ====================================
-print("\n==============================================")
-print("Generating IAMLines ...")
-dataset_lines = IAMLines(num_style_samples=1, load_gen_sample=False)
-print(f"IAMLines size = {len(dataset_lines)} samples")
+generate_lines_dataset(IAMLines, "IAMLines")
+generate_lines_dataset(CVLLines, "CVLLines")
 
-run_generation(dataset_lines, "IAMLines_my_model")
 print("\n🎉 All generation complete!")
